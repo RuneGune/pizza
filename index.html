@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pizza menu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --tomato:#c8372d; --tomato-dark:#a32a21; --basil:#2f5d3a; --ink:#2a1f1a;
+    --muted:#6f655e; --line:#e6e0d8; --bg:#ffffff; --card:#ffffff; --chip:#f3efe9;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Bricolage Grotesque",system-ui,-apple-system,Segoe UI,sans-serif;padding-bottom:84px}
+  .band{
+    background-image:linear-gradient(90deg,rgba(200,55,45,.55) 50%,transparent 50%),linear-gradient(rgba(200,55,45,.55) 50%,transparent 50%);
+    background-size:28px 28px;background-color:#fff;padding:36px 20px;border-bottom:3px solid var(--tomato);
+  }
+  .plate{max-width:760px;margin:0 auto;background:#fff;padding:18px 26px;border:2px solid var(--ink);display:inline-block}
+  .band-inner{max-width:1100px;margin:0 auto}
+  h1{margin:0;font-size:clamp(2rem,6vw,3.4rem);font-weight:800;letter-spacing:-.02em;line-height:1}
+  .plate p{margin:6px 0 0;color:var(--muted)}
+  main{max-width:1100px;margin:0 auto;padding:24px 20px}
+  .tools{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:22px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{font:inherit;font-weight:500;border:1px solid var(--line);background:var(--chip);color:var(--ink);padding:8px 14px;border-radius:999px;cursor:pointer}
+  .chip[aria-pressed="true"]{background:var(--basil);border-color:var(--basil);color:#fff}
+  .spacer{flex:1}
+  input[type=search],select{font:inherit;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+  input[type=search]{min-width:200px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
+  .card{border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:6px;background:var(--card)}
+  .card.in{border-color:var(--basil);box-shadow:inset 4px 0 0 var(--basil)}
+  .card h2{margin:0;font-size:1.25rem;font-weight:800}
+  .cat{color:var(--basil);font-size:.85rem;font-weight:500}
+  .desc{color:var(--muted);font-size:.95rem;flex:1;margin:2px 0 8px}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .price{font-size:1.4rem;font-weight:800}
+  button{font:inherit;cursor:pointer}
+  .add{background:var(--tomato);color:#fff;border:0;border-radius:8px;padding:9px 18px;font-weight:800}
+  .add:hover{background:var(--tomato-dark)}
+  .stepper{display:flex;align-items:center;gap:4px}
+  .stepper button{width:34px;height:34px;border-radius:8px;border:1px solid var(--ink);background:#fff;font-size:1.2rem;line-height:1}
+  .stepper span{min-width:28px;text-align:center;font-weight:800}
+  .empty{color:var(--muted);padding:30px 0}
+  .bar{position:fixed;left:0;right:0;bottom:0;background:var(--ink);color:#fff;padding:14px 20px;display:flex;justify-content:center}
+  .bar-inner{max-width:1100px;width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .bar a{background:var(--tomato);color:#fff;text-decoration:none;font-weight:800;padding:10px 18px;border-radius:8px}
+  .bar a:hover{background:var(--tomato-dark)}
+  :focus-visible{outline:3px solid #1d6fe0;outline-offset:2px}
+</style>
+</head>
+<body>
+<header class="band"><div class="band-inner"><div class="plate">
+  <h1>Pick your pizzas</h1>
+  <p>Browse the menu, add what you like, then view your order.</p>
+</div></div></header>
+
+<main>
+  <div class="tools">
+    <div class="chips" id="chips" role="group" aria-label="Filter by type"></div>
+    <div class="spacer"></div>
+    <input type="search" id="search" placeholder="Search name or topping" aria-label="Search pizzas">
+    <select id="sort" aria-label="Sort pizzas">
+      <option value="menu">Menu order</option>
+      <option value="asc">Price: low to high</option>
+      <option value="desc">Price: high to low</option>
+    </select>
+  </div>
+  <div class="grid" id="grid"></div>
+  <p class="empty" id="empty" hidden>No pizzas match that search.</p>
+</main>
+
+<div class="bar"><div class="bar-inner">
+  <div id="summary">No pizzas yet</div>
+  <a id="viewOrder" href="pizza-order.html">View order</a>
+</div></div>
+
+<script>
+const CURRENCY = "kr";
+const PIZZAS = [
+  {id:"margherita",name:"Margherita",cat:"Classic",price:79,desc:"Tomato, mozzarella, fresh basil"},
+  {id:"marinara",name:"Marinara",cat:"Classic",price:69,desc:"Tomato, garlic, oregano, olive oil"},
+  {id:"funghi",name:"Funghi",cat:"Classic",price:89,desc:"Tomato, mozzarella, mushrooms"},
+  {id:"prosciutto",name:"Prosciutto",cat:"Classic",price:95,desc:"Tomato, mozzarella, ham"},
+  {id:"capricciosa",name:"Capricciosa",cat:"Classic",price:99,desc:"Ham, mushrooms, artichokes, olives"},
+  {id:"quattro-formaggi",name:"Quattro Formaggi",cat:"Classic",price:99,desc:"Mozzarella, gorgonzola, parmesan, fontina"},
+  {id:"pepperoni",name:"Pepperoni",cat:"Meat",price:95,desc:"Tomato, mozzarella, spicy pepperoni"},
+  {id:"salami-piccante",name:"Salami Piccante",cat:"Meat",price:99,desc:"Hot salami, chili oil, mozzarella"},
+  {id:"hawaiian",name:"Hawaiian",cat:"Meat",price:95,desc:"Ham, pineapple, mozzarella"},
+  {id:"bbq-chicken",name:"BBQ Chicken",cat:"Meat",price:109,desc:"Chicken, BBQ sauce, red onion, corn"},
+  {id:"meat-lovers",name:"Meat Lovers",cat:"Meat",price:119,desc:"Pepperoni, sausage, ham, bacon"},
+  {id:"sausage-peppers",name:"Sausage & Peppers",cat:"Meat",price:105,desc:"Italian sausage, peppers, onion"},
+  {id:"carbonara",name:"Carbonara",cat:"Meat",price:109,desc:"Cream, bacon, egg, black pepper, pecorino"},
+  {id:"vegetariana",name:"Vegetariana",cat:"Veggie",price:95,desc:"Peppers, onion, mushrooms, olives, zucchini"},
+  {id:"greek",name:"Greek",cat:"Veggie",price:99,desc:"Feta, olives, tomato, red onion, oregano"},
+  {id:"spinach-ricotta",name:"Spinach & Ricotta",cat:"Veggie",price:95,desc:"Spinach, ricotta, garlic, mozzarella"},
+  {id:"pesto-tomato",name:"Pesto & Tomato",cat:"Veggie",price:95,desc:"Basil pesto, cherry tomatoes, mozzarella"},
+  {id:"truffle-mushroom",name:"Truffle Mushroom",cat:"Veggie",price:115,desc:"Wild mushrooms, truffle oil, parmesan"},
+  {id:"vegan-garden",name:"Vegan Garden",cat:"Veggie",price:99,desc:"Vegan cheese, roasted vegetables, herbs"},
+  {id:"tonno",name:"Tonno",cat:"Seafood",price:99,desc:"Tuna, red onion, olives, mozzarella"},
+  {id:"napoli",name:"Napoli",cat:"Seafood",price:95,desc:"Anchovies, capers, olives, tomato"},
+  {id:"shrimp-garlic",name:"Shrimp & Garlic",cat:"Seafood",price:119,desc:"Shrimp, garlic butter, parsley, lemon"},
+  {id:"frutti-di-mare",name:"Frutti di Mare",cat:"Seafood",price:125,desc:"Shrimp, mussels, squid, tomato"},
+  {id:"diavola",name:"Diavola",cat:"Specialty",price:105,desc:"Spicy salami, chili, mozzarella, tomato"},
+  {id:"burrata",name:"Burrata",cat:"Specialty",price:125,desc:"Burrata, cherry tomatoes, basil, olive oil"},
+  {id:"pear-gorgonzola",name:"Pear & Gorgonzola",cat:"Specialty",price:115,desc:"Pear, gorgonzola, walnuts, honey"},
+  {id:"nduja-honey",name:"'Nduja & Honey",cat:"Specialty",price:119,desc:"Spicy 'nduja, mozzarella, hot honey"}
+];
+
+/* ---- cart storage (shared with pizza-order.html) ---- */
+function parseCart(str){const o={};(str||"").split(",").forEach(s=>{const [id,q]=s.split(":");if(id&&+q>0)o[id]=+q;});return o;}
+function serializeCart(c){return Object.entries(c).filter(([,q])=>q>0).map(([id,q])=>id+":"+q).join(",");}
+function loadCart(){
+  const p=new URLSearchParams(location.search).get("cart");
+  if(p!==null){const c=parseCart(p);saveCart(c);history.replaceState(null,"",location.pathname);return c;}
+  try{return JSON.parse(localStorage.getItem("pizzaCart")||"{}");}catch(e){return {};}
+}
+function saveCart(c){try{localStorage.setItem("pizzaCart",JSON.stringify(c));}catch(e){}}
+
+let cart = loadCart();
+let category = "All";
+const money = n => n + " " + CURRENCY;
+const $ = id => document.getElementById(id);
+
+const cats = ["All", ...new Set(PIZZAS.map(p=>p.cat))];
+$("chips").innerHTML = cats.map(c=>`<button class="chip" data-cat="${c}" aria-pressed="${c===category}">${c}</button>`).join("");
+
+function controls(id){
+  const q = cart[id]||0;
+  return q
+    ? `<div class="stepper"><button data-act="dec" data-id="${id}" aria-label="Remove one">−</button><span>${q}</span><button data-act="inc" data-id="${id}" aria-label="Add one">+</button></div>`
+    : `<button class="add" data-act="inc" data-id="${id}">Add</button>`;
+}
+
+function render(){
+  const term = $("search").value.trim().toLowerCase();
+  let list = PIZZAS.filter(p => (category==="All"||p.cat===category) &&
+    (!term || (p.name+" "+p.desc).toLowerCase().includes(term)));
+  const s = $("sort").value;
+  if(s==="asc") list=[...list].sort((a,b)=>a.price-b.price);
+  if(s==="desc") list=[...list].sort((a,b)=>b.price-a.price);
+  $("grid").innerHTML = list.map(p=>`
+    <article class="card ${cart[p.id]?"in":""}" id="card-${p.id}">
+      <span class="cat">${p.cat}</span>
+      <h2>${p.name}</h2>
+      <p class="desc">${p.desc}</p>
+      <div class="row"><span class="price">${money(p.price)}</span><div class="ctl">${controls(p.id)}</div></div>
+    </article>`).join("");
+  $("empty").hidden = list.length>0;
+  updateBar();
+}
+
+function updateBar(){
+  let n=0,total=0;
+  for(const [id,q] of Object.entries(cart)){const p=PIZZAS.find(x=>x.id===id);if(p){n+=q;total+=q*p.price;}}
+  $("summary").textContent = n ? `${n} pizza${n>1?"s":""} · ${money(total)}` : "No pizzas yet";
+  $("viewOrder").href = "pizza-order.html?cart=" + serializeCart(cart);
+}
+
+$("grid").addEventListener("click", e=>{
+  const b = e.target.closest("button[data-act]"); if(!b) return;
+  const id=b.dataset.id, act=b.dataset.act;
+  cart[id] = Math.max(0,(cart[id]||0) + (act==="inc"?1:-1));
+  if(!cart[id]) delete cart[id];
+  saveCart(cart);
+  const card=$("card-"+id);
+  card.classList.toggle("in", !!cart[id]);
+  card.querySelector(".ctl").innerHTML = controls(id);
+  const again = card.querySelector(`button[data-act="${act}"]`) || card.querySelector("button");
+  if(again) again.focus();
+  updateBar();
+});
+$("chips").addEventListener("click", e=>{
+  const b=e.target.closest(".chip"); if(!b) return;
+  category=b.dataset.cat;
+  document.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed", c.dataset.cat===category));
+  render();
+});
+$("search").addEventListener("input", render);
+$("sort").addEventListener("change", render);
+render();
+</script>
+</body>
+</html>

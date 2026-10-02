@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your order</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&display=swap" rel="stylesheet">
+<style>
+  :root{--tomato:#c8372d;--tomato-dark:#a32a21;--basil:#2f5d3a;--ink:#2a1f1a;--muted:#6f655e;--line:#e6e0d8}
+  *{box-sizing:border-box}
+  body{margin:0;background:#fff;color:var(--ink);font-family:"Bricolage Grotesque",system-ui,-apple-system,Segoe UI,sans-serif}
+  .band{
+    background-image:linear-gradient(90deg,rgba(200,55,45,.55) 50%,transparent 50%),linear-gradient(rgba(200,55,45,.55) 50%,transparent 50%);
+    background-size:28px 28px;padding:36px 20px;border-bottom:3px solid var(--tomato)
+  }
+  .band-inner,main{max-width:760px;margin:0 auto}
+  .plate{background:#fff;padding:18px 26px;border:2px solid var(--ink);display:inline-block}
+  h1{margin:0;font-size:clamp(2rem,6vw,3.4rem);font-weight:800;letter-spacing:-.02em;line-height:1}
+  main{padding:24px 20px 60px}
+  a.back{color:var(--basil);font-weight:800;text-decoration:none}
+  a.back:hover{text-decoration:underline}
+  ul{list-style:none;margin:18px 0 0;padding:0}
+  li{display:grid;grid-template-columns:1fr auto auto;gap:6px 18px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
+  .name{font-weight:800;font-size:1.15rem}
+  .unit{color:var(--muted);font-size:.9rem}
+  .line{font-weight:800;min-width:80px;text-align:right}
+  button{font:inherit;cursor:pointer}
+  .stepper{display:flex;align-items:center;gap:4px}
+  .stepper button{width:34px;height:34px;border-radius:8px;border:1px solid var(--ink);background:#fff;font-size:1.2rem;line-height:1}
+  .stepper span{min-width:28px;text-align:center;font-weight:800}
+  .remove{grid-column:1/-1;justify-self:start;background:none;border:0;color:var(--tomato);padding:0;font-size:.9rem}
+  .remove:hover{text-decoration:underline}
+  .total{display:flex;justify-content:space-between;align-items:baseline;margin-top:22px;font-size:1.5rem;font-weight:800}
+  .total small{display:block;color:var(--muted);font-size:.9rem;font-weight:500}
+  .actions{display:flex;gap:12px;margin-top:22px;flex-wrap:wrap}
+  .primary{background:var(--tomato);color:#fff;border:0;border-radius:8px;padding:12px 22px;font-weight:800}
+  .primary:hover{background:var(--tomato-dark)}
+  .secondary{background:#fff;border:1px solid var(--ink);border-radius:8px;padding:12px 18px;color:var(--ink)}
+  .msg{padding:30px 0;color:var(--muted);font-size:1.1rem}
+  .done{border:2px solid var(--basil);padding:22px;border-radius:10px;margin-top:20px}
+  .done h2{margin:0 0 6px;color:var(--basil)}
+  :focus-visible{outline:3px solid #1d6fe0;outline-offset:2px}
+</style>
+</head>
+<body>
+<header class="band"><div class="band-inner"><div class="plate"><h1>Your order</h1></div></div></header>
+<main>
+  <a class="back" id="back" href="index.html">Back to the menu</a>
+  <div id="content"></div>
+</main>
+
+<script>
+const CURRENCY = "kr";
+/* Keep this list in sync with pizza-menu.html */
+const PIZZAS = [
+  {id:"margherita",name:"Margherita",price:79},{id:"marinara",name:"Marinara",price:69},
+  {id:"funghi",name:"Funghi",price:89},{id:"prosciutto",name:"Prosciutto",price:95},
+  {id:"capricciosa",name:"Capricciosa",price:99},{id:"quattro-formaggi",name:"Quattro Formaggi",price:99},
+  {id:"pepperoni",name:"Pepperoni",price:95},{id:"salami-piccante",name:"Salami Piccante",price:99},
+  {id:"hawaiian",name:"Hawaiian",price:95},{id:"bbq-chicken",name:"BBQ Chicken",price:109},
+  {id:"meat-lovers",name:"Meat Lovers",price:119},{id:"sausage-peppers",name:"Sausage & Peppers",price:105},
+  {id:"carbonara",name:"Carbonara",price:109},{id:"vegetariana",name:"Vegetariana",price:95},
+  {id:"greek",name:"Greek",price:99},{id:"spinach-ricotta",name:"Spinach & Ricotta",price:95},
+  {id:"pesto-tomato",name:"Pesto & Tomato",price:95},{id:"truffle-mushroom",name:"Truffle Mushroom",price:115},
+  {id:"vegan-garden",name:"Vegan Garden",price:99},{id:"tonno",name:"Tonno",price:99},
+  {id:"napoli",name:"Napoli",price:95},{id:"shrimp-garlic",name:"Shrimp & Garlic",price:119},
+  {id:"frutti-di-mare",name:"Frutti di Mare",price:125},{id:"diavola",name:"Diavola",price:105},
+  {id:"burrata",name:"Burrata",price:125},{id:"pear-gorgonzola",name:"Pear & Gorgonzola",price:115},
+  {id:"nduja-honey",name:"'Nduja & Honey",price:119}
+];
+
+function parseCart(str){const o={};(str||"").split(",").forEach(s=>{const [id,q]=s.split(":");if(id&&+q>0)o[id]=+q;});return o;}
+function serializeCart(c){return Object.entries(c).filter(([,q])=>q>0).map(([id,q])=>id+":"+q).join(",");}
+function saveCart(c){try{localStorage.setItem("pizzaCart",JSON.stringify(c));}catch(e){}}
+function loadCart(){
+  const p=new URLSearchParams(location.search).get("cart");
+  if(p!==null){const c=parseCart(p);saveCart(c);history.replaceState(null,"",location.pathname);return c;}
+  try{return JSON.parse(localStorage.getItem("pizzaCart")||"{}");}catch(e){return {};}
+}
+
+let cart = loadCart();
+const money = n => n + " " + CURRENCY;
+const $ = id => document.getElementById(id);
+
+function render(focusSel){
+  $("back").href = "index.html?cart=" + serializeCart(cart);
+  const items = PIZZAS.filter(p=>cart[p.id]);
+  if(!items.length){
+    $("content").innerHTML = `<p class="msg">Your order is empty. <a class="back" href="${$("back").href}">Pick some pizzas</a></p>`;
+    return;
+  }
+  let n=0,total=0;
+  const rows = items.map(p=>{
+    const q=cart[p.id]; n+=q; total+=q*p.price;
+    return `<li>
+      <div><div class="name">${p.name}</div><div class="unit">${money(p.price)} each</div></div>
+      <div class="stepper"><button data-act="dec" data-id="${p.id}" aria-label="Remove one ${p.name}">−</button><span>${q}</span><button data-act="inc" data-id="${p.id}" aria-label="Add one ${p.name}">+</button></div>
+      <div class="line">${money(q*p.price)}</div>
+      <button class="remove" data-act="remove" data-id="${p.id}">Remove</button>
+    </li>`;}).join("");
+  $("content").innerHTML = `
+    <ul>${rows}</ul>
+    <div class="total"><div>Total<small>${n} pizza${n>1?"s":""}</small></div><div>${money(total)}</div></div>
+    <div class="actions">
+      <button class="primary" data-act="place">Place order</button>
+      <button class="secondary" data-act="clear">Clear order</button>
+    </div>`;
+  if(focusSel){const el=$("content").querySelector(focusSel);if(el)el.focus();}
+}
+
+$("content").addEventListener("click", e=>{
+  const b=e.target.closest("button[data-act]"); if(!b) return;
+  const {act,id}=b.dataset;
+  if(act==="inc") cart[id]=(cart[id]||0)+1;
+  if(act==="dec"){cart[id]=(cart[id]||0)-1; if(cart[id]<=0) delete cart[id];}
+  if(act==="remove") delete cart[id];
+  if(act==="clear") cart={};
+  if(act==="place"){
+    const total=PIZZAS.reduce((s,p)=>s+(cart[p.id]||0)*p.price,0);
+    cart={}; saveCart(cart);
+    $("back").href="index.html";
+    $("content").innerHTML=`<div class="done"><h2>Order placed</h2><p>Your total was ${money(total)}. Enjoy your pizza!</p><a class="back" href="index.html">Start a new order</a></div>`;
+    return;
+  }
+  saveCart(cart);
+  render(id && cart[id] ? `button[data-act="${act}"][data-id="${id}"]` : null);
+});
+render();
+</script>
+</body>
+</html>
